@@ -1,4 +1,4 @@
-
+ 
 Ïß³Ì»úÖÆÊµÏ°±¨¸æ
 
 
@@ -32,16 +32,14 @@ Sleepº¯Êý£ºÏß³ÌÓÉÓÚÄ³ÖÖÔ­Òò½øÈë×èÈû×´Ì¬µÈ´ýÒ»¸öÊÂ¼þµÄ·¢Éú£¬µ±ÕâÐ©Ìõ¼þµÃµ½Âú×ã£¬¸
 Stackallocateº¯Êý£ºÎªÐÂÏß³ÌÉêÇëÕ»¿Õ¼ä£¬²¢ÉèÖÃºÃ×¼±¸ÔËÐÐÏß³ÌµÄÌõ¼þ¡£
 
 3¡¢Exercise 4 Ôö¼ÓÏß³ÌÊý¾Ý½á¹¹²¢ÊµÏÖÈ«¾ÖÏß³Ì¹ÜÀí»úÖÆ
-ºÏ²¢Íê³ÉExercise 3ºÍExercise 4£¬Ê×ÏÈÔÚthread.hÖÐÌí¼ÓuseridºÍthreadidÁ½¸öprivateµÄintÐÍ±äÁ¿×÷ÎªÓÃ»§IDºÍÏß³ÌID£¬²¢Ìí¼ÓÁ½¸ö»ñÈ¡¶ÔÓ¦IDµÄpublicº¯Êý¡£
+Ê×ÏÈÔÚthread.hÖÐÌí¼ÓuseridºÍthreadidÁ½¸öprivateµÄintÐÍ±äÁ¿×÷ÎªÓÃ»§IDºÍÏß³ÌID£¬²¢Ìí¼ÓÁ½¸ö»ñÈ¡¶ÔÓ¦IDµÄpublicº¯Êý¡£
 ÎªÏÞÖÆÏß³Ì×ÜÊý£¬ÉèÖÃÒ»¸öÈ«¾ÖµÄÊý×éint ThreadIDs[MAXThreads];MAXThreads´ú±í×î´óÏß³ÌÊý£¬±¾´ÎÉèÎª128¡£Êý×é³õÊ¼Öµ¾ùÎª0£¬Ã¿½¨Á¢Ò»¸öÏß³ÌÔò½«¶ÔÓ¦µÄÎ»ÖÃ¸³Îª1£¬³ýÖ÷Ïß³Ìmain£¨mainIDÎª1000£©Íâ£¬Ã¿¸öÏß³ÌµÄID¼´Êý×éÖÐ¶ÔÓ¦µÄÏÂ±ê¡£
 ¶ÔÓÚÓÃ»§ID£¬´´½¨µÄÐÂÏß³ÌÖ±½ÓÀûÓÃunistd.hÍ·ÎÄ¼þÖÐ´øÓÐµÄgetuidº¯Êý»ñÈ¡µ±Ç°ÏµÍ³µÄuserid£¬²âÊÔÖÐÎª1000¡£
 ¶ÔÓÚÏß³ÌID£¬ÐÞ¸ÄThreadÏß³Ì¹¹Ôìº¯Êý£¬Ìí¼ÓÏß³ÌID·ÖÅä¹¦ÄÜAllocateThreadID£ºÊµÏÖµÄÔ­ÀíÊÇÃ¿´ÎÀûÓÃÒ»¸öforÑ­»·´ÓÏß³ÌÊý×éÖÐÑ°ÕÒÎª0Î»ÖÃµÄÏÂ±ê¸³¸øÐÂÏß³Ì²¢ÉèÎª1È»ºó·µ»Ø£¬Èç¹ûÃ»ÓÐÕÒµ½£¬ËµÃ÷Ïß³ÌÒÑ·ÖÅäÂú£¨¶ÔÏß³ÌÊýÁ¿µÄÏÞÖÆ£©·µ»Ø-1¡£ÔÚThread¹¹Ôìº¯ÊýÖÐ£¬ThreadID»á½ÓÊÜ·ÖÅäº¯ÊýµÄ·µ»ØÖµ£¬Èç¹û·¢ÏÖÖµÎª-1¼´Ïß³ÌÊýÁ¿ÒÑÂú£¬ÔòÊä³ö¡°Reached MaxThreadsNum£¡£¡¡±£¬ÔÙÀûÓÃASSERT¶ÏÑÔÏÞÖÆºóÐø´úÂëµÄÔËÐÐ£¬¼´Í£Ö¹ÐÂÏß³ÌµÄ´´½¨¡£
 µ±Ïß³ÌÍË³öÊ±£¬ÔÚ~ThreadÎö¹¹º¯ÊýÖÐ£¬½«Ïß³ÌÊý×éÖÐÏß³ÌIDÏÂ±êËù¶ÔÓ¦µÄÖµÖØÐÂÉèÎª0¡£
+ÔÚmain.ccÖ÷º¯ÊýÎÄ¼þÖÐ£¬Ìí¼Ó¶Ô-tÃüÁîµÄ½âÎö£¬¼´×î´óÏß³ÌÊýÁ¿µÄ²âÊÔ¡£
  
-ÔÚmain.ccÖ÷º¯ÊýÎÄ¼þÖÐ£¬Ìí¼Ó¶Ô-tÃüÁîµÄ½âÎö£¬¼´×î´óÏß³ÌÊýÁ¿µÄ²âÊÔ£¬½á¹ûÈçÍ¼¡£
- 
-
-¼òµ¥TS¹¦ÄÜµÄÊµÏÖ£¬Ö±½ÓÀûÓÃscheduler.ccÖÐµÄprint¹¦ÄÜÊä³öreadyList¾ÍÐ÷¶ÓÁÐ£¬²¢¼ÓÉÏÕýÔÚÖ´ÐÐµÄcurrentthread¡£
+TS¹¦ÄÜµÄÊµÏÖ£º½«ÏµÍ³ÖÐÕýÔÚÔËÐÐµÄÏß³ÌÊä³ö£¬nachosÏµÍ³ÖÐÕýÔÚÔËÐÐµÄÏß³Ì¿ÉÒÔÖ±½ÓÓÃThread::printº¯Êý½øÐÐÊä³ö£¬ÆäËû´´½¨ÔÚ¾ÍÐ÷¶ÓÁÐÖÐµÄÏß³ÌÀûÓÃscheduler->Print()º¯Êý½øÐÐÊä³ö£¬¼´¶Ô¾ÍÐ÷¶ÓÁÐÖÐËùÓÐÏß³Ìµ÷ÓÃprintº¯Êý¡£
  
 
 
