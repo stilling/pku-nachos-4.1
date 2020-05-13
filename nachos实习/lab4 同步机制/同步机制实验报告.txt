@@ -1,0 +1,229 @@
+内容一：同步机制
+进程的并发执行在提升效率的同时也带来临界区资源互斥访问的问题，为实现进程对资源的互斥访问，发明了进程互斥的软件和硬件解决方案。
+1.软件解法
+● Dekker解法：引入turn变量进行P、Q操作。P操作时将turn设为2，在Q操作中置为1，用turn的值实现互斥
+● Peterson解法：定义enter和leave函数，和兴趣数组interest。利用语句while( turn == process &&interested[other] == TRUE);锁住另一个进入的进程。
+2.硬件解法
+● 屏蔽中断：在临界区外执行“开关中断”指令，适用于操作系统本身
+● TSL(XCHG)指令：“测试并加锁指令”，利用复制到锁的寄存器的0,1值实现临界区的互斥访问
+
+3.信号量机制：信号量是一个特殊变量，用于进程间传递信号的一个整数值，对信号量可以实施：初始化、P和V操作。
+
+4.管程：在程序设计语言中引入管程成分，是一种高级同步机制。
+管程是一个特殊的模块，由关于共享资源的数据结构及在其上操作的一组过程组成。进程只能通过调用管程中的过程来间接访问管程中的数据结构。
+管程机制首先要保证互斥性，由编译器负责保证；其次，管程中设置条件变量及等待/唤醒操作以解决同步问题。
+多个进程同时访问时：
+当一个进入管程的进程执行等待操作时，它应当释放管程的互斥权。当后面进入管程的进程执行唤醒操作时（例如，P 唤醒 Q ），管程中便存在两个同时处于活动状态的进程。
+有三种解决方案：
+● Hoare:P等待Q执行
+● MESA:Q等待P继续执行，使用notify通知条件队列
+● Hansan,并发pasal:规定唤醒为管程中最后一个可执行的操作
+
+5，Pthead（锁、条件变量）
+锁：互斥量MUTEX，适用于管理共享资源或一小段代码，有加锁或解锁两种状态。
+
+6.进程通信
+基本通信方式
+消息传递：send&receive原语；
+共享内存:互相通信的进程间建立公共内存区域；
+管道PIPE：利用一个缓冲传输介质
+套接字：服务器创建一个套接字，并将其与本地地址/端口号绑定；监听；当捕获到一个连接请求后，接受并生成一个套接字，调用recv()/send()与客户端通信，最后关闭新建的套接字。客户端：为请求服务也创建一个套接字，并将其与本地地址/端口号绑定；指定服务器端的地址和端口号，并发出套接字连接请求；当请求被接受后，调用recv()/send()与服务器通信，最后关闭套接字连接。
+远程过程调用(RPC)
+
+内容二：LINUX同步机制
+      Linux中内核同步的方式有：每CPU变量、原子操作、内存屏障、自旋锁、顺序锁、读-拷贝-更新(RCU)、信号量、禁止本地中断等。
+      每CPU变量是即每个CPU都有自己的变量，各自仅访问自己的每CPU变量。
+      原子操作由编译器来保证，一个线程对数据的操作不会被其他线程打断；自旋锁的特点就是当一个线程获取了锁之后，其他试图获取这个锁的线程一直在循环等待获取这个锁，直至锁重新可用。由于线程一直在循环获取这个锁，所以会造成 CPU 处理时间的浪费，因此最好将自旋锁用于很快能处理完的临界区。自旋锁使用时两点注意：1.自旋锁是不可递归的，以为自选锁内部关了抢占，递归的话最深层级的函数调用尝试获取自旋锁但是由于第一层级函数调用还没释放，所以会一直死自旋下去。2.线程获取自旋锁之前，要禁止当前处理器上的中断。（事实上，spin_lock() 函数内部会自己做这个）。
+      读写自旋锁，读锁之间是共享的，即一个线程持有了读锁之后，其他线程也可以以读的方式持有这个锁；写锁之间是互斥的，读写锁之间也是互斥的。
+      信号量，信号量也是一种锁，线程在获取不到信号量的时候，会进入睡眠，直到有信号量释放出来才会唤醒睡眠的进程，进入临界区执行。信号量适用于等待时间较长的临界区，信号量消耗 CPU 时间的地方在于使线程睡眠和唤醒线程。 如果（使线程睡眠 + 唤醒线程）的 CPU 时间 > 线程自旋等待 CPU 时间，那么可以考虑使用自旋锁。
+      互斥量，mutex的值只能为1，其中可以调用sleep睡眠进程，而spin_lock不行。中断上下文不能使用mutex，仅在持有者需要睡眠时优先使用mutex。
+      顺序和屏障：防止编译器优化。
+
+内容三：源代码阅读
+同步机制模块(synch.cc synch.h)
+线程的同步和互斥是多个线程协同工作的基础。Nachos提供了三种同步和互斥的手段就：信号量、锁机制以及条件变量机制。
+首先在synch.h中定义了信号量结构体，包括P,V操作，信号量值（≥0），线程等待队列。P操作当value等于0时，将当前运行线程放入线程等待队列；当前运行线程进入睡眠状态，并切换到其它线程运行。当value大于0时候，值减减。V操作，如果线程等待队列中有等待该信号量的线程，取出其中一个将其设置成就绪态，准备运行，value++。具体函数在synch.cc中实现。
+Lock锁机制，锁机制是线程进入临界区的工具，一个锁有两种状态，BUSY和FREE，FREE时线程取得锁可以进入临界区，BUSY时需要申请锁的线程进入睡眠队列，等待锁FREE时，再取得该锁。以及判断锁是否为现运行线程拥有。Nachos中锁是用信号量来实现的，一个锁有自己的lockHolder，锁持有线程。
+Condition条件变量，wait、signal操作。和信号量与锁机制不一样，它是没有值的（锁机制是一个二值信号量）当一个线程需要的某种条件没有得到满足时，可以将自己作为一个等待条件变量的线程插入所有等待该条件变量的队列；只要条件一旦满足，该线程就会被唤醒继续运行。条件变量总是和锁机制一同使用。包括wait线程进入等待，Signal唤醒一个等待该条件变量的线程；记忆Broadroad唤醒所有。
+在synch.cc中是相应功能的实现。
+
+synchlist.h和synchlist.cc
+用于定义synchronized list，当队列为空时，线程尝试移除元素会一直等待。
+在队列中添加 *Lock锁和条件变量 *listEmpty。Append操作，加锁后向队列中添加元素，listEmpty执行Signal操作；RemoveFront，若队列为空则循环等待（允许被中断）。
+
+内容三：实现锁和条件变量
+nachos中利用信号量去实现锁（value为1的信号量）和条件变量。
+锁的初始化构造函数是建立一个值为1的信号量，锁的持有线程为NULL。Acqueire操作即信号量的P操作，lockHolder为当前线程;Release操作，即信号量V操作。
+条件变量，初始化构建信号量队列waitQueue。Wait操作，传入参数为当前线程的条件变量锁，conditionLock;建立值为0的条件信号量waiter并加入到waitQueue中，加锁后执行waiter的P操作。Signal操作，V操作尝试唤醒waitQueue中的第一个线程。
+
+内容四：生产消费者问题的实现
+// threadtest.cc
+// 信号量解决生产者消费者问题
+#define N 1024 // 缓冲区大小
+Semaphore* empty = new Semaphore("emptyBuffer", N);
+Semaphore* mutex = new Semaphore("lockSemaphore", 1);
+Semaphore* full = new Semaphore("fullBuffer", 0);
+int msgQueue = 0;
+
+void Producer(int val){
+  while(1) {
+    empty->P();
+    mutex->P();
+    if(msgQueue >= N){ // 已经满了则停止生产
+    	printf("-->Product alread full:[%d],wait consumer.",msgQueue);
+    }else{
+      printf("-->name:[%s],threadId:[%d],before:[%d],after:[%d]\n",\
+      currentThread->getName(),currentThread->getThreadId(),msgQueue,msgQueue+1);
+      ++msgQueue;
+    }
+    mutex->V();
+    full->V();
+
+    sleep(val); // 休息下再生产
+  }
+}
+
+void Customer(int val){
+  while(1) {
+    full->P();
+    mutex->P();
+    if(msgQueue <= 0){
+    	printf("Product alread empty:[%d],wait Producer.",msgQueue);
+    }else{
+      printf("name:[%s] threadId:[%d],before:[%d],after:[%d]\n",\
+      currentThread->getName(),currentThread->getThreadId(),msgQueue,msgQueue-1);
+      --msgQueue;
+    }
+    mutex->V();
+    empty->V();
+
+    sleep(val); // 休息下再消费
+    }
+}
+
+void ThreadProducerConsumerTest(){
+  DEBUG('t', "Entering ThreadProducerConsumerTest");
+  // 两个生产者
+  Thread* p1 = new Thread("Producer1");
+  Thread* p2 = new Thread("Producer2");
+  p1->Fork(Producer, 1);
+  p2->Fork(Producer, 3);
+
+	// 两个消费者，可以关掉一个消费者，查看生产速率和消费速率的变化
+  Thread* c1 = new Thread("Consumer1");
+  //Thread* c2 = new Thread("Consumer2");
+  c1->Fork(Customer, 1);
+  //c2->Fork(Customer, 2);
+}
+内容五：实现barrier
+
+// 条件变量实现barrier
+Condition* barrCond = new Condition("BarrierCond");
+Lock* barrLock = new Lock("BarrierLock");
+int barrierCnt = 0;
+// 当且仅当barrierThreadNum个线程同时到达时才能往下运行
+const int barrierThreadNum = 5; 
+
+void barrierFun(int num)
+{
+  /*while(1)*/
+  {
+    barrLock->Acquire();
+    ++barrierCnt;
+    
+    if(barrierCnt == barrierThreadNum){
+			// 最后一个线程到达后判断，条件满足则发送一个广播信号
+			// 唤醒等待在该条件变量上的所有线程
+      printf("threadName:[%s%d],barrierCnt:[%d],needCnt:[%d],Broadcast.\n",\
+      currentThread->getName(),num,barrierCnt,barrierThreadNum);
+      barrCond->Broadcast(barrLock);
+      barrLock->Release();
+    }else{
+    	// 每一个线程都执行判断，若条件不满足，线程等待在条件变量上
+      printf("threadName:[%s%d],barrierCnt:[%d],needCnt:[%d],Wait.\n",\
+      currentThread->getName(),num,barrierCnt,barrierThreadNum);
+      barrCond->Wait(barrLock);
+      barrLock->Release();
+    }
+    printf("threadName:[%s%d],continue to run.\n", currentThread->getName(),num);
+  }
+}
+
+void barrierThreadTest(){
+  DEBUG('t', "Entering barrierThreadTest");
+  for(int i = 0; i < barrierThreadNum; ++i){
+    Thread* t = new Thread("barrierThread");
+    t->Fork(barrierFun,i+1);
+  }
+}
+内容六：锁实现读者写者问题
+
+int rCnt = 0; // 记录读者数量
+Lock* rLock = new Lock("rlock");
+// 必须用信号量，不能用锁，因为锁只能由加锁的线程解锁
+Semaphore* wLock = new Semaphore("wlock",1); 
+int bufSize = 0;
+// Lab3 锁实现读者写者问题
+void readFunc(int num){
+  while(1) {
+    rLock->Acquire();
+    ++rCnt;
+    // 如果是第一个读者进入，需要竞争1值信号量wLock，竞争成功才能进入临界区
+    // 一旦竞争到wLock，由最后一个读者出临界区后释放，保证了读者优先
+    if(rCnt == 1){ 
+    	wLock->P();
+    }
+    rLock->Release();
+    if(0 == bufSize){
+			// 没有数据可读
+      printf("threadName:[%s],bufSize:[%d],current not data.\n",currentThread->getName(),bufSize);
+    }else{
+			// 读取数据
+			printf("threadName:[%s],bufSize:[%d],exec read operation.\n",currentThread->getName(),bufSize);
+    }
+    rLock->Acquire();
+    --rCnt;
+    // 最后一个读者释放wLock
+    if(rCnt == 0){
+    	wLock->V();
+    }
+    rLock->Release();
+    currentThread->Yield();
+    sleep(num);
+  }
+}
+
+void writeFunc(int num){
+  while(1) {
+    wLock->P();
+    ++bufSize;
+    printf("writerThread:[%s],before:[%d],after:[%d]\n", currentThread->getName(), bufSize, bufSize+1);
+    wLock->V();
+    currentThread->Yield();
+    sleep(num);
+  }
+}
+
+void readWriteThreadTest()
+{
+  DEBUG('t', "Entering readWriteThreadTest");
+  Thread * r1 = new Thread("read1");
+  Thread * r2 = new Thread("read2");
+  Thread * r3 = new Thread("read3");
+  Thread * w1 = new Thread("write1");
+  Thread * w2 = new Thread("write2");
+
+	// 3个读者2个写者
+  r1->Fork(readFunc,1);
+  w1->Fork(writeFunc,1);
+  r2->Fork(readFunc,1);
+  w2->Fork(writeFunc,1);
+  r3->Fork(readFunc,1);
+}
+内容七：Linux的kfifo机制
+通过限定写入的数据不能溢出和内存屏障实现在单线程写单线程读的情况下不使用锁。因为锁是使用在共享资源可能存在冲突的情况下。还用设置buffer缓冲区的大小为2的幂次方，以简化求模运算，这样求模运算就演变为 (fifo->in & (fifo->size - 1))。通过使用unsigned int为kfifo的下标，可以不用考虑每次下标超过size时对下表进行取模运算赋值，这里使用到了无符号整数的溢出回零的特性。由于指示读写指针的下标一直在增加，没有进行取模运算，知道其溢出，在这种情况下写满和读完就是不一样的标志，写满是两者指针之差为fifo->size，读完的标志是两者指针相等。后面有一篇博客还介绍了VxWorks下的环形缓冲区的实现机制点击打开链接，从而可以看出linux下的fifo的灵巧性和高效性。
+kfifo主要有以下特点：
+保证缓冲空间的大小为2的次幂，不是的向上取整为2的次幂。
+使用无符号整数保存输入(in)和输出(out)的位置，在输入输出时不对in和out的值进行模运算，而让其自然溢出，并能够保证in-out的结果为缓冲区中已存放的数据长度，这也是最能体现kfifo实现技巧的地方；
+使用内存屏障(Memory Barrier)技术，实现单消费者和单生产者对kfifo的无锁并发访问，多个消费者、生产者的并发访问还是需要加锁的。
+

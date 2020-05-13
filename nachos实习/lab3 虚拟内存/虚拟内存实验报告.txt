@@ -1,0 +1,92 @@
+内容一：总体概述
+虚拟内存管理是充分利用物理内存空间的有效方式，在nachos中，用宿主机的一块内存模拟nachos 的内存，只作为执行用户程序时的一个暂存池。用户程序逻辑地址和实际地址之间的转换有线性页面地址转换方法和TLB页面地址转换方法。
+
+内容二：TLB异常处理部分
+1.源代码阅读
+Nachos 的虚存管理方式，系统中有三类页表，实页页表、虚页页表和用户程序页表。用户进程执行都有一张页表，每一项对应于一个虚页。其中TLB和页表有且仅要存在一个。
+● 对内存、寄存器以及CPU的模拟Machine.h(cc)，translate.h(cc)文件
+Nachos的机器模拟部分，对内存和寄存器的模拟。
+Translate代码的功能是将虚拟页翻译为物理地址页，
+无论是线性页面地址还是TLB页面地址转换，都需要地址转换表，地址转换表由若干个表项(Entry)组成，在translate.h中定义页框类TranslationEntry，包括逻辑页号，内存物理页号，表项和页状态。
+在Translate.cc中short/wordtohost四个数据转换函数，取字符中的特定位，解决不同运行平台的数据表达。
+read和write 读取1，2或4个字节的数据
+Machine::ReadMem函数，根据传入的虚拟地址利用translate函数将虚拟地址转换为物理地址，如果读取成功再根据读取字节数计算结果，放入value所指向空间中。
+Machine::WriteMem函数：将value值根据size大小转换成相应的机器类型写入虚拟地址对应的物理内存。
+Machine::Translate函数：将虚拟地址转换为物理地址，判断命中页表还是TLB，页号VPN=virtAddr / PageSize，即虚拟地址除以页框大小;后面的位数为页内偏移量offset。根据页号分别在TLB和pageTable中查找表项，如果是TLB需要在整个表中挨个查找，并判断是否出错。最后返回物理地址为物理页号乘以页大小+offset。
+Machine.h文件：定义内存管理规模，包括页大小，物理页大小，模拟内存大小main memory，TLB大小；ExceptionType异常类型，包括系统调用，页面转换，访问出错等；MIPS指令寄存器的定义，包括32个MIPS机的寄存器和8个Nachos系统调用的有关寄存器；machine类用于用户程序的执行，定义模拟硬件工作，包括寄存器、内存，就像用户程序所见到的。Run函数：运行一个用户程序，先将系统当前状态设置为用户模式，再用OneInstruction取出一条指令，将该指令进行解码，分析出其中的操作代码、寄存器和立即数，根据操作代码将该指令模拟执行，时钟前进一个Tick，并重复此行为；register寄存器模拟和相应读取写入操作， TLB和线性页面转换表的定义，pageTableSize线性页面转换表大小。类TranslationEntry地址转换表的表项，记录程序逻辑页到内存实页的映射关系，和实页的使用状态，访问权限信息。Read/writeMem，内存读取。构造函数，寄存器和内存初始化，建立TLB，析构函数，删除内存和tlb。RaiseException方法，出错陷入时调用。
+Machine.cc文件，陷入异常的名称以及machine类的实现
+构造函数，初始化寄存器和内存值，是否启动TLB。析构函数，删除内存空间和tlb。
+Machine::RaiseException函数，执行出错陷入处理程序，终止进程后进入系统态，执行异常处理函数。badVAddr为系统出错陷入所在的位置。
+Machine::Debugger函数，执行用户程序调试器。
+Machine::DumpState函数，打印机器寄存器和内存状态。
+Mipssim文件：instruction类，模拟机的机器指令定义。
+● Exception.cc文件：用户程序调用内核，定义了ExceptionHandler函数：输入为异常的类型，为系统调用陷入还是其他，再读取第二个寄存器中的内容，即系统调用的类型，根据异常和系统调用的类型执行相应功能。
+
+● 用户程序空间Addrspace.h与Addrspace.cc
+用于跟踪用户进程地址空间的数据结构，
+在.h文件中定义用户进程空间类Addrspace，包括用户栈空间大小，读入用户程序的load函数，Execute函数，savestate保存当前机器页表状态和restorestate函数恢复机器页表状态。*pageTable页表，numPages虚页数。
+AddrSpace构造函数，初始化物理页数的pagetable即用户进程页表，初始虚拟页号等于物理页号，析构函数即删除页表。Load函数载入用户程序，输入为文件名，executable执行代码的打开文件结构，读取为noffH。Execute：运行machine中的用户程序。InitRegisters：初始化寄存器
+Execute执行函数，将内核线程的地址空间设为当前类，
+InitRegisters下一条指令寄存器NextPCReg设为4，用户程序的堆栈指针设为内存空间numPages * PageSize减去16。Restore恢复机器页表状态。
+AddrSpace::Translate：用户程序中的地址翻译
+2.TLB MISS 异常处理
+修改code/userprog目录下exception.cc中的ExceptionHandler函数，使得Nachos系统可以对TLB异常进行处理。
+在ExceptionHandler函数中添加TLBFaultException的情况，具体处理过程为：从机器寄存器的BadAddReg中读出出错陷入时用户程序的逻辑地址，然后将地址传入TLBmiss处理函数中解决。
+TLBmiss函数，从线性页面转换表pageTable中查询对应的表项，找到后置换到TLB中，若TLB已满，选择哪一个TLB中的表项换出就需要涉及到TLB页面置换算法。
+
+3.置换算法
+页面置换算法有LRU和FIFO，首先在TranslationEntry页框类中添加time时间属性，用于记录页表项的访问或读入时间数据。
+LRU和FIFO的置换算法代码相同，都是从TLB页表中寻找time最早的页表项换出，若TLB未满则为空页表项。
+在LRU算法中，time的更新在访问TLB页表项时；在FIFO中，time的更新在TLB读入页表项的时候。
+结果显示，LRU算法较优。
+
+内容三：分页内存管理
+1.全局内存管理
+采用位图机制，位图中一位代表物理内存中的一页。物理内存总量等于物理页数乘以页面大小，初始页面大小和物理页数均为128。那么同样的，也开辟128块空间的位图，一块位图空间代表一个物理页。位图中用一个长度为128的整数数组表示。
+位图结构使用nachos文件系统中的bitmap来构建，带有FindAndSet函数，在位图中寻找空闲位，并用mark函数标记。一次标记32字节大小的数据。
+位图的清除在程序退出之后，在exception.cc的系统调用中添加SC_Exit，即用户程序的退出。将当前用户程序占用的位图清除，指令计数前移，最后调用finish结束当前进程。调用Finish后，会先关闭中断，把当前线程标记为将要销毁的线程，
+然后调用Sleep操作，在Sleep函数中，当前线程会把自身的状态改为阻塞态，并且从就绪队列里面找出新的线程上CPU，如果没有就绪的线程，那么就执行Interrupt中的Idle操作。有的话，让新线程上CPU。新线程如果不是第一次运行的话，就会从上一次被中断的点继续执行，判断是否有线程需要被销毁，如果有的话，就delete该线程的数据结构。
+
+2.多线程支持
+目前Nachos中只能在系统内存中运行一个用户程序，可以看出每一个用户程序在运行之前，Nachos都要初始化一个Addrespace来为新的用户程序分配内存空间，而每一此Addrespace进行初始化时都需要对原有的内存进行归零操作，所以不能同时运行两个用户程序。
+在AddrSpace::load函数中添加第二个打开的用户文件，“add.noff”。多线程支持后，多个线程共享内存空间，需要改变内存空间的读取机制，将主存分页（物理页）分页，也将用户程序分页（虚拟页），将不同用户程序的某些虚拟页映射到物理页上，实现共存。修改noffH的读取方式，将用户程序以1Bytes为单位，将代码所在内存的物理地址写入到mainMemory中。
+最后在startprocess函数中，再新创建一个线程，并用这个线程装载一个用户程序，可以实现主函数的用户程序分配完页表后，还没开始执行，另一个线程的用户程序就分配页表，并执行了。当这个线程执行完毕之后，才轮到主函数的用户程序执行。这就说明了，可以多线程同时存在于主存当中。 程序之间的的切换通过Switch指令进行寄存器数组以及pagetable的转换。
+
+
+3.缺页中断处理
+在现行的操作系统中，比较流行的开辟虚拟内存有三种方式：
+1.       在物理磁盘上开辟单独的一块作为虚拟内存（有别于文件系统）
+2.       将一个独立的磁盘分区作为虚拟内存
+3.       将文件系统中的一个文件作为虚拟内存
+进入pagefaul有两种情况，一种是在translate函数中entry为null进入，另一种是tlbmiss函数中发现pagetable无法找到对应项，都返回PageFault，进入exception中处理。
+对于缺页中断，类似TLB缺页时的处理，为每一个线程建立虚拟内存文件（一个128长度的数组），在建立用户程序内存时遍历数组从中找到未分配的虚拟内存文件名，而后将用户程序的code段和initData写入。但需要lazy-loading的支持
+具体的处理函数如下：
+case:PageTablePageFaultException
+		int vpn = (unsigned)machine->registers[BadVAddrReg] / PageSize;
+		int pos = map.find();
+		if (pos == -1) {
+			pos = 0;
+			for (int j = 0; j < machine->pageTableSize; j++) {
+				if (machine->pageTable[j].physicalPage == 0) {
+					if (machine->pageTable[j].dirty == TRUE) {
+						openfile->WriteAt(&(machine->mainMemory[pos*PageSize]),PageSize,machine->pageTable[j].virtualPage*partial);
+						machine->pageTable[j].valid = FALSE;
+						break;
+					}
+				}
+			}
+		}
+		openfile->ReadAt(&(machine->mainMemory[pos*PageSize]), PageSize, vpn*PageSize);
+		machine->pageTable[vpn].valid = TRUE;
+		machine->pageTable[vpn].physicalPage = pos;
+		machine->pageTable[vpn].use = FALSE;
+		machine->pageTable[vpn].dirty = FALSE;
+		machine->pageTable[vpn].readOnly = FALSE;
+		delete openfile;
+
+
+内容四：Lazy-loading
+
+内容五：添加线程挂起状态
+
+内容六：倒排页表
