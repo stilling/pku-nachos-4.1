@@ -1,0 +1,29 @@
+所有操作首先均进入nachos/code/build.linux下 运行make编译nachos，命令栏窗口最后出现nachos即为编译成功。main.cc是主控制台部分，通过解析命令执行功能，大部分功能由kernel内核调用。
+线程机制部分
+1. ./nachos -t 全局线程管理机制
+
+2. ./nachos -TS 输出系统中正在运行的线程
+
+线程调度部分
+3. ./nachos -K 时间片轮转调度
+
+虚拟内存部分
+4. ./nachos -x ../test/halt.noff TLB异常处理(LRU)与全局线程管理
+5. ./nachos -vm 虚拟内存与缺页中断处理
+
+同步机制部分
+
+6 ./nachos -sypc 信号量实现生产消费者问题
+
+7 ./nachos -syrw 锁实现读者写者问题
+
+8 ./nachos -sybr 5 条件变量实现屏障,数字5代表屏蔽的线程数量
+
+
+系统调用部分
+  ./nachos -x ../test/create.noff 用户程序的create系统调用（文件系统的Read、Write、Open、Close同理）
+
+ ./nachos -x ../test/exit.noff 用户程序退出（包括ThreadYield同理）
+
+
+（时间片轮转调度与同步机制部分暂时无法共存，在thread.h中定义synch来决定是否使用时间片轮转）

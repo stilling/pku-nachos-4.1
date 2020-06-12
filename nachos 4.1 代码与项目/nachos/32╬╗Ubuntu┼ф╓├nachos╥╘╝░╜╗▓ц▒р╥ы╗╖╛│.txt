@@ -1,0 +1,17 @@
+unzip NachOS4.1ForUbuntu.zip
+sudo tar xvf mips-decstation.linux-xgcc.tgz -C /
+
+cd NachOS4.1\ for\ ubuntu/code/build.linux/
+make depend
+make
+
+cd ../../coff2noff/
+./configure
+make
+
+cd ../code/test/
+make
+
+#some tests
+../build.linux/nachos -x add.noff
+../build.linux/nachos -x halt.noff

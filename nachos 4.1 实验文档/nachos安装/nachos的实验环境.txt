@@ -1,0 +1,12 @@
+nachos运行于linux系统，可以在内核版本1.2.13以上的各种linux版本中运行，编译器的版本是gcc2.7.2版本以上。
+一、VMware虚拟机
+     我们不用直接在本地机器上安装linux，而是可以在VMware虚拟机软件虚拟化的PC上运行。
+     Ubantu是基于linux内核的操作系统，具有良好的图形界面功能和较为丰富的应用软件，由于nachos的限制，我们需要选择下载32位的Ubantu操作系统，并在VMware上运行。
+
+二、nachos 编译
+     解压nachos后，在目录下的nachos文件夹中即包含nachos各部分代码和C++实例，code文件夹中为nachos 的源代码部分，各部分目录下都有makefile文件，可以利用make depend、make nachos命令进行单独编译，
+也可以进入build.linux文件夹中在命令栏输入make全部编译。
+
+三、交叉编译器
+     Nachos系统使用的R2/3000指令集，无法直接在Linux中编译，需要使用交叉编译技术，让用户编写的应用程序在Linux系统中用标准gcc编译后再Nachos环境中运行。交叉编译器可以在一个操作系统下将源码翻译成另一个操作系统的目标码。
+     选择MIPS交叉编译器，解压到nachos目录下。
